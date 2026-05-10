@@ -50,6 +50,8 @@ docker compose up --build
 
 ## API
 
+Detailed API usage is available in [API_USAGE.md](API_USAGE.md).
+
 Health:
 
 ```powershell
