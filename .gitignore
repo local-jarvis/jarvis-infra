@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+
+# GGUF model files are large and should be mounted or referenced by path.
+models/*.gguf
+models/*.bin
+models/.cache/
+!models/.gitkeep

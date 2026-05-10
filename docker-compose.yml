@@ -1,0 +1,15 @@
+services:
+  qwen-fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      LLAMA_MODEL_PATH: /models/qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf
+      LLAMA_N_CTX: "4096"
+      LLAMA_N_THREADS: "0"
+      LLAMA_N_GPU_LAYERS: "0"
+      LLAMA_PRELOAD_MODEL: "false"
+      LLAMA_VERBOSE: "false"
+      API_KEY: ""
+    volumes:
+      - ./models:/models:ro
