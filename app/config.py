@@ -42,8 +42,8 @@ def _env_bool(name: str, default: bool = False) -> bool:
 class Settings:
     app_name: str = _env("APP_NAME", "qwen-gguf-fastapi")
     api_key: str = _env("API_KEY")
-    model_path: Path = Path(_env("LLAMA_MODEL_PATH", "./models/Qwen2.5-7B-Instruct.gguf"))
-    served_model_name: str = _env("SERVED_MODEL_NAME", "qwen2.5-7b-instruct-gguf")
+    model_path: Path = Path(_env("LLAMA_MODEL_PATH", "./models/gemma-3-4b-it-Q4_K_M.gguf"))
+    served_model_name: str = _env("SERVED_MODEL_NAME", "gemma-3-4b-it-gguf")
 
     n_ctx: int = _env_int("LLAMA_N_CTX", 4096)
     n_threads: int = _env_int("LLAMA_N_THREADS", 0)

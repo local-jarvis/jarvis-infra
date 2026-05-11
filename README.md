@@ -1,6 +1,6 @@
 # jarvis-infra
 
-Python FastAPI service for serving a pre-downloaded Qwen2.5 7B Instruct GGUF
+Python FastAPI service for serving a pre-downloaded Gemma 3 4B Instruct GGUF
 model through llama.cpp via `llama-cpp-python`.
 
 ## Layout
@@ -15,20 +15,16 @@ model through llama.cpp via `llama-cpp-python`.
 Place the GGUF file outside git, then point the service at it:
 
 ```powershell
-$env:LLAMA_MODEL_PATH="C:\models\Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+$env:LLAMA_MODEL_PATH="C:\models\gemma-3-4b-it-Q4_K_M.gguf"
 ```
 
-The current Docker Compose configuration expects the official Qwen split GGUF
-download:
+The current Docker Compose configuration expects Gemma 3 4B Instruct GGUF Q4_K_M:
 
 ```powershell
-.\.venv\Scripts\hf.exe download Qwen/Qwen2.5-7B-Instruct-GGUF `
-  --include "qwen2.5-7b-instruct-q4_k_m*.gguf" `
+.\.venv\Scripts\hf.exe download ggml-org/gemma-3-4b-it-GGUF `
+  --include "gemma-3-4b-it-Q4_K_M.gguf" `
   --local-dir models
 ```
-
-Use the first split file as `LLAMA_MODEL_PATH`; llama.cpp loads the companion
-split from the same directory.
 
 ## Local Run
 
@@ -36,7 +32,7 @@ split from the same directory.
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-$env:LLAMA_MODEL_PATH="C:\models\Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+$env:LLAMA_MODEL_PATH="C:\models\gemma-3-4b-it-Q4_K_M.gguf"
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -56,6 +52,10 @@ docker compose up --build
 ## API
 
 Detailed API usage is available in [API_USAGE.md](API_USAGE.md).
+
+The served model is logged when the app is ready. Chat completion requests and
+responses are logged as single-line JSON messages with the `chat_log` prefix in
+the application logs.
 
 Health:
 
@@ -87,6 +87,7 @@ curl.exe -H "Authorization: Bearer change-me" http://localhost:8000/v1/models
 - `LLAMA_N_GPU_LAYERS`: GPU offload layers, default `0`
 - `LLAMA_CHAT_FORMAT`: optional explicit chat format; empty uses GGUF metadata
 - `LLAMA_PRELOAD_MODEL`: load model during startup when `true`
+- `SERVED_MODEL_NAME`: model id returned by `/v1/models` and completions
 - `DEFAULT_MAX_TOKENS`: default completion length, default `512`
 - `DEFAULT_TEMPERATURE`: default temperature, default `0.7`
 - `DEFAULT_TOP_P`: default top-p, default `0.95`

@@ -1,6 +1,6 @@
 # API Usage
 
-이 문서는 로컬에서 실행 중인 Qwen2.5 7B Instruct GGUF FastAPI 서버의 API 사용법을 정리합니다.
+이 문서는 로컬에서 실행 중인 Gemma 3 4B Instruct GGUF FastAPI 서버의 API 사용법을 정리합니다.
 
 기본 주소:
 
@@ -69,7 +69,7 @@ curl.exe http://localhost:8000/readyz
 ```json
 {
   "status": "ready",
-  "model_path": "/models/qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf",
+  "model_path": "/models/gemma-3-4b-it-Q4_K_M.gguf",
   "model_path_exists": true,
   "model_loaded": true
 }
@@ -98,7 +98,7 @@ curl.exe http://localhost:8000/v1/models
   "object": "list",
   "data": [
     {
-      "id": "qwen2.5-7b-instruct-gguf",
+      "id": "gemma-3-4b-it-gguf",
       "object": "model",
       "created": 0,
       "owned_by": "local"
@@ -168,7 +168,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   "id": "chatcmpl-d2f86c74-20be-4b28-b8ed-62c5a3b54afa",
   "object": "chat.completion",
   "created": 1778399910,
-  "model": "qwen2.5-7b-instruct-gguf",
+  "model": "gemma-3-4b-it-gguf",
   "choices": [
     {
       "index": 0,
@@ -202,6 +202,30 @@ curl.exe -N -X POST http://localhost:8000/v1/chat/completions -H "Content-Type: 
 data: {"id":"...","object":"chat.completion.chunk",...}
 
 data: [DONE]
+```
+
+## Logging
+
+`/v1/chat/completions` 요청은 애플리케이션 로그에 `chat_log` prefix가 붙은
+single-line JSON으로 남습니다.
+
+앱이 준비되면 현재 서빙 모델도 기록됩니다.
+
+```text
+chat_log {"event":"model_serving_ready","served_model_name":"...","model_path":"...","model_path_exists":true,"model_loaded":true,"preload_model":true}
+```
+
+요청 시작 시에는 유저가 보낸 payload가 기록됩니다.
+
+```text
+chat_log {"event":"chat_completion_request","request_id":"...","request_payload":{...}}
+```
+
+응답 완료 시에는 같은 `request_id`로 유저 payload와 응답 payload가 함께 기록됩니다.
+스트리밍 응답은 토큰 조각을 모은 최종 `content`가 기록됩니다.
+
+```text
+chat_log {"event":"chat_completion_response","request_id":"...","request_payload":{...},"response_payload":{...},"elapsed_ms":123.45}
 ```
 
 ## 오류 응답
