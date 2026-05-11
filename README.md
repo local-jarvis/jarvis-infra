@@ -44,7 +44,12 @@ You can also copy `.env.example` to `.env`; the app loads it automatically.
 
 ## Docker Run
 
+Docker Compose loads runtime environment values from `.env.docker`.
+Copy `.env.docker.example` to `.env.docker`, then edit it for container paths
+such as `/models/...`.
+
 ```powershell
+Copy-Item .env.docker.example .env.docker
 docker compose up --build
 ```
 

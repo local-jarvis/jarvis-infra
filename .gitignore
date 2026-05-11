@@ -11,3 +11,5 @@ models/*.gguf
 models/*.bin
 models/.cache/
 !models/.gitkeep
+
+.env.docker
