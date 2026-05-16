@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from .config import settings
-from .llm import LlamaModelManager, ModelUnavailableError
+from .llm import LlamaModelManager, ModelUnavailableError, UnknownModelError
 from .schemas import ChatCompletionRequest
 
 
@@ -116,14 +116,12 @@ def _logged_stream(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.preload_model:
-        await asyncio.to_thread(model_manager.load)
+        await asyncio.to_thread(model_manager.preload_all)
 
     _log_json(
         "model_serving_ready",
-        served_model_name=settings.served_model_name,
-        model_path=str(model_manager.model_path),
-        model_path_exists=model_manager.model_path.exists(),
-        model_loaded=model_manager.is_loaded,
+        default_model_name=model_manager.default_model_name,
+        models=model_manager.status(),
         preload_model=settings.preload_model,
     )
 
@@ -170,12 +168,12 @@ async def healthz():
 
 @app.get("/readyz")
 async def readyz():
-    exists = model_manager.model_path.exists()
+    models = model_manager.status()
+    ready = all(model["model_path_exists"] for model in models)
     return {
-        "status": "ready" if exists else "not_ready",
-        "model_path": str(model_manager.model_path),
-        "model_path_exists": exists,
-        "model_loaded": model_manager.is_loaded,
+        "status": "ready" if ready else "not_ready",
+        "default_model": model_manager.default_model_name,
+        "models": models,
     }
 
 
@@ -185,11 +183,12 @@ async def list_models():
         "object": "list",
         "data": [
             {
-                "id": settings.served_model_name,
+                "id": model_name,
                 "object": "model",
                 "created": 0,
                 "owned_by": "local",
             }
+            for model_name in model_manager.model_names
         ],
     }
 
@@ -206,19 +205,31 @@ async def create_chat_completion(request: ChatCompletionRequest):
         request_payload=request_payload,
     )
 
+    try:
+        model_name = model_manager.resolve_model_name(request.model)
+    except UnknownModelError as exc:
+        _log_json(
+            "chat_completion_error",
+            request_id=request_id,
+            request_payload=request_payload,
+            elapsed_ms=round((time.perf_counter() - started_at) * 1000, 2),
+            error=str(exc),
+        )
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     payload = request.llama_kwargs(
         default_max_tokens=settings.default_max_tokens,
         default_temperature=settings.default_temperature,
         default_top_p=settings.default_top_p,
     )
-    payload["model"] = request.model or settings.served_model_name
+    payload["model"] = model_name
 
     if request.stream:
         try:
-            await asyncio.to_thread(model_manager.load)
+            await asyncio.to_thread(model_manager.load, model_name)
             return StreamingResponse(
                 _logged_stream(
-                    model_manager.stream_chat_completion(payload),
+                    model_manager.stream_chat_completion(model_name, payload),
                     request_id=request_id,
                     request_payload=request_payload,
                     started_at=started_at,
@@ -236,7 +247,11 @@ async def create_chat_completion(request: ChatCompletionRequest):
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     try:
-        result = await asyncio.to_thread(model_manager.create_chat_completion, payload)
+        result = await asyncio.to_thread(
+            model_manager.create_chat_completion,
+            model_name,
+            payload,
+        )
     except ModelUnavailableError as exc:
         _log_json(
             "chat_completion_error",
@@ -251,7 +266,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
         result.setdefault("id", f"chatcmpl-{int(time.time() * 1000)}")
         result.setdefault("object", "chat.completion")
         result.setdefault("created", int(time.time()))
-        result.setdefault("model", settings.served_model_name)
+        result["model"] = model_name
 
     _log_json(
         "chat_completion_response",

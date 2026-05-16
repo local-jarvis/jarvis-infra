@@ -1,6 +1,7 @@
 services:
-  qwen-fastapi:
+  llamacpp-fastapi:
     build: .
+    image: jarvis-llamacpp-fastapi:local
     ports:
       - "8000:8000"
     env_file:

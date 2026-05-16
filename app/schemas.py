@@ -11,7 +11,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: Optional[str] = None
+    model: str = Field(..., min_length=1)
     messages: List[ChatMessage] = Field(..., min_length=1)
     max_tokens: Optional[int] = Field(default=None, ge=1)
     temperature: Optional[float] = Field(default=None, ge=0)

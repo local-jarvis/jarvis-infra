@@ -39,11 +39,51 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 @dataclass(frozen=True)
+class ModelSettings:
+    name: str
+    path: Path
+
+
+def _env_models() -> tuple[ModelSettings, ...]:
+    raw = _env("LLAMA_MODELS")
+    if not raw:
+        return (
+            ModelSettings(
+                name=_env("SERVED_MODEL_NAME", "gemma-3-4b-it-gguf"),
+                path=Path(_env("LLAMA_MODEL_PATH", "./models/gemma-3-4b-it-Q4_K_M.gguf")),
+            ),
+        )
+
+    models: list[ModelSettings] = []
+    for entry in raw.replace("\n", ";").split(";"):
+        entry = entry.strip()
+        if not entry:
+            continue
+
+        name, separator, path = entry.partition("=")
+        if not separator or not name.strip() or not path.strip():
+            raise ValueError(
+                "LLAMA_MODELS entries must use 'model-name=/path/to/model.gguf'."
+            )
+
+        models.append(ModelSettings(name=name.strip(), path=Path(path.strip())))
+
+    if not models:
+        raise ValueError("LLAMA_MODELS did not contain any valid model entries.")
+
+    names = [model.name for model in models]
+    if len(set(names)) != len(names):
+        raise ValueError("LLAMA_MODELS contains duplicate model names.")
+
+    return tuple(models)
+
+
+@dataclass(frozen=True)
 class Settings:
-    app_name: str = _env("APP_NAME", "qwen-gguf-fastapi")
+    app_name: str = _env("APP_NAME", "jarvis-llamacpp-fastapi")
     api_key: str = _env("API_KEY")
-    model_path: Path = Path(_env("LLAMA_MODEL_PATH", "./models/gemma-3-4b-it-Q4_K_M.gguf"))
-    served_model_name: str = _env("SERVED_MODEL_NAME", "gemma-3-4b-it-gguf")
+    models: tuple[ModelSettings, ...] = _env_models()
+    default_model_name: str = _env("DEFAULT_MODEL_NAME")
 
     n_ctx: int = _env_int("LLAMA_N_CTX", 4096)
     n_threads: int = _env_int("LLAMA_N_THREADS", 0)
